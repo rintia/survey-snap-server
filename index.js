@@ -99,7 +99,27 @@ async function run() {
                 const result = await usersCollection.insertOne(newUser);
                 res.send(result);
               })
+              app.get('/users', async (req, res) => {
+                const cursor = usersCollection.find();
+                const result = await cursor.toArray();
+                res.send(result);
+            })
+
+            app.put('/users/:id', async (req, res) => {
+                const id = req.params.id;
+                const filter = { _id: new ObjectId(id) }
+                const updatedUser = req.body;
           
+                const user = {
+                  $set: {
+                   role: updatedUser.role
+                  }
+                }
+                const result = await usersCollection.updateOne(filter, user);
+                res.send(result);
+              })
+
+            
 
            
 

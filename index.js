@@ -45,6 +45,31 @@ async function run() {
             res.send(result);
         })
 
+        app.post('/surveys', async (req, res) => {
+            const newSurvey = req.body;
+            newSurvey.timestamp = new Date();
+            console.log(newSurvey);
+            const result = await surveysCollection.insertOne(newSurvey);
+            res.send(result);
+          })
+
+          app.put('/surveys/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true };
+            const updatedSurvey = req.body;
+      
+            const survey = {
+              $set: {
+                title: updatedSurvey.title,
+                question: updatedSurvey.question,
+                description: updatedSurvey.description
+              }
+            }
+            const result = await surveysCollection.updateOne(filter, survey, options);
+            res.send(result);
+          })
+
         app.patch('/surveys/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const moment = require('moment');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
@@ -76,6 +77,9 @@ async function run() {
             const filter = { _id: new ObjectId(id) };
             const updatedSurvey = req.body;
             console.log(updatedSurvey);
+
+            updatedSurvey.timeVoted = moment().toISOString();
+
             const updateDoc = {
               $set: {
                 totalVoted: updatedSurvey.totalVoted,
@@ -83,7 +87,9 @@ async function run() {
                 noVoted: updatedSurvey.noVoted,
                 likes: updatedSurvey.likes,
                 dislikes: updatedSurvey.dislikes,
-                voters: updatedSurvey.voters
+                voters: updatedSurvey.voters,
+                votersNames: updatedSurvey.votersNames,
+                timeVoted: updatedSurvey.timeVoted,
               },
             };
             const result = await surveysCollection.updateOne(filter, updateDoc);

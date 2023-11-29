@@ -5,6 +5,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const app = express();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -32,6 +33,7 @@ async function run() {
 
     const surveysCollection = client.db('SurveyDB').collection('surveys');
     const usersCollection = client.db('SurveyDB').collection('users');
+    const paymentCollection = client.db("SurveyDB").collection("payments");
 
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -40,21 +42,21 @@ async function run() {
       res.send({ token });
     })
 
-      // middlewares 
-      const verifyToken = (req, res, next) => {
-        console.log('inside verify token', req.headers.authorization);
-        if (!req.headers.authorization) {
-          return res.status(401).send({ message: 'unauthorized access' });
-        }
-        const token = req.headers.authorization.split(' ')[1];
-        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-          if (err) {
-            return res.status(401).send({ message: 'unauthorized access' })
-          }
-          req.decoded = decoded;
-          next();
-        })
+    // middlewares 
+    const verifyToken = (req, res, next) => {
+      console.log('inside verify token', req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
       }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
 
 
     // surveys api
@@ -106,51 +108,51 @@ async function run() {
       if ('userFeedback' in updatedSurvey) {
         // Handle user feedback update
         const userFeedbackDoc = {
-            $set: {
-                userFeedback: updatedSurvey.userFeedback
-            }
+          $set: {
+            userFeedback: updatedSurvey.userFeedback
+          }
         };
-       const result= await surveysCollection.updateOne(filter, userFeedbackDoc);
-    }
-    if ('adminFeedback' in updatedSurvey) {
-      const updatedDoc = {
-        $set: {
-          adminFeedback: updatedSurvey.adminFeedback,
+        const result = await surveysCollection.updateOne(filter, userFeedbackDoc);
+      }
+      if ('adminFeedback' in updatedSurvey) {
+        const updatedDoc = {
+          $set: {
+            adminFeedback: updatedSurvey.adminFeedback,
             status: updatedSurvey.status
-        }
-    };
-   const result= await surveysCollection.updateOne(filter, updatedDoc);
-    } 
-    
-    if ('status' in updatedSurvey) {
-      const updatedDoc = {
-        $set: {
+          }
+        };
+        const result = await surveysCollection.updateOne(filter, updatedDoc);
+      }
+
+      if ('status' in updatedSurvey) {
+        const updatedDoc = {
+          $set: {
             status: updatedSurvey.status
-        }
-    };
-   const result= await surveysCollection.updateOne(filter, updatedDoc);
-    } 
+          }
+        };
+        const result = await surveysCollection.updateOne(filter, updatedDoc);
+      }
 
-    else{
+      else {
 
-      const updateDoc = {
-        $set: {
-          totalVoted: updatedSurvey.totalVoted,
-          yesVoted: updatedSurvey.yesVoted,
-          noVoted: updatedSurvey.noVoted,
-          likes: updatedSurvey.likes,
-          dislikes: updatedSurvey.dislikes,
-          votersEmails: updatedSurvey.votersEmails,
-          voters: updatedSurvey.voters,
-        },
-      };
-      const result = await surveysCollection.updateOne(filter, updateDoc);
-      
-    }
+        const updateDoc = {
+          $set: {
+            totalVoted: updatedSurvey.totalVoted,
+            yesVoted: updatedSurvey.yesVoted,
+            noVoted: updatedSurvey.noVoted,
+            likes: updatedSurvey.likes,
+            dislikes: updatedSurvey.dislikes,
+            votersEmails: updatedSurvey.votersEmails,
+            voters: updatedSurvey.voters,
+          },
+        };
+        const result = await surveysCollection.updateOne(filter, updateDoc);
+
+      }
       res.send(result);
     })
 
-   
+
 
 
     // users
@@ -181,6 +183,51 @@ async function run() {
       const result = await usersCollection.updateOne(filter, user);
       res.send(result);
     })
+
+    // payment intent
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intent')
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    });
+
+    app.post('/payments/:id', async (req, res) => {
+      try {
+          const payment = req.body;
+          const paymentResult = await paymentCollection.insertOne(payment);
+  
+          // Carefully update the role of the user
+          console.log('Payment info', payment);
+  
+          const id = req.params.id; 
+          const filter = { _id: new ObjectId(id) };
+          const updatedUser = req.body;
+  
+          const userUpdate = {
+              $set: {
+                  role: 'pro-user',
+              }
+          };
+  
+          const updateResult = await usersCollection.updateOne(filter, userUpdate);
+  
+          res.send({ paymentResult, updateResult });
+      } catch (error) {
+          console.error('Error processing payment and updating user role:', error.message);
+          res.status(500).send('Internal Server Error');
+      }
+  });
+  
 
 
 

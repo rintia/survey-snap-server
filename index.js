@@ -78,7 +78,6 @@ async function run() {
             const updatedSurvey = req.body;
             console.log(updatedSurvey);
 
-            updatedSurvey.timeVoted = moment().toISOString();
 
             const updateDoc = {
               $set: {
@@ -87,9 +86,8 @@ async function run() {
                 noVoted: updatedSurvey.noVoted,
                 likes: updatedSurvey.likes,
                 dislikes: updatedSurvey.dislikes,
+                votersEmails: updatedSurvey.votersEmails,
                 voters: updatedSurvey.voters,
-                votersNames: updatedSurvey.votersNames,
-                timeVoted: updatedSurvey.timeVoted,
               },
             };
             const result = await surveysCollection.updateOne(filter, updateDoc);

@@ -88,6 +88,24 @@ async function run() {
         };
        const result= await surveysCollection.updateOne(filter, userFeedbackDoc);
     }
+    if ('adminFeedback' in updatedSurvey) {
+      const updatedDoc = {
+        $set: {
+          adminFeedback: updatedSurvey.adminFeedback,
+            status: updatedSurvey.status
+        }
+    };
+   const result= await surveysCollection.updateOne(filter, updatedDoc);
+    } 
+    
+    if ('status' in updatedSurvey) {
+      const updatedDoc = {
+        $set: {
+            status: updatedSurvey.status
+        }
+    };
+   const result= await surveysCollection.updateOne(filter, updatedDoc);
+    } 
 
     else{
 

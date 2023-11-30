@@ -209,6 +209,12 @@ async function run() {
       })
     });
 
+    app.get('/payments', verifyToken, async (req, res) => {
+      const cursor = paymentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
     app.post('/payments/:id', async (req, res) => {
       try {
           const payment = req.body;

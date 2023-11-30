@@ -132,6 +132,14 @@ async function run() {
         };
         const result = await surveysCollection.updateOne(filter, updatedDoc);
       }
+      if ('comments' in updatedSurvey) {
+        const updatedDoc = {
+          $set: {
+            comments: updatedSurvey.comments
+          }
+        };
+        const result = await surveysCollection.updateOne(filter, updatedDoc);
+      }
 
       else {
 

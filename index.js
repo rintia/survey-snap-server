@@ -165,12 +165,18 @@ async function run() {
 
     // users
 
-    app.post('/users', verifyToken, async (req, res) => {
+    app.post('/users',  async (req, res) => {
       const newUser = req.body;
+      const query = { email: newUser.email }
+      const existingUser = await usersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
       console.log(newUser);
       const result = await usersCollection.insertOne(newUser);
       res.send(result);
     })
+
     app.get('/users', verifyToken, async (req, res) => {
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
